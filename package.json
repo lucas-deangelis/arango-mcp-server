@@ -1,28 +1,28 @@
 {
-    "name": "arango-mcp-server",
-    "version": "0.1.0",
-    "description": "MCP server for interacting with Arango databases. For more information about the Model Context Protocol, visit https://modelcontextprotocol.io",
-    "license": "MIT",
-    "author": "Lucas DE ANGELIS <deangelis.lucas@outlook.com>",
-    "bugs": "https://github.com/lucas-deangelis/arango-mcp-server/issues",
-    "type": "module",
-    "bin": {
-      "mcp-server-postgres": "dist/index.js"
-    },
-    "files": [
-      "dist"
-    ],
-    "scripts": {
-      "build": "tsc && shx chmod +x dist/*.js",
-      "prepare": "npm run build",
-      "watch": "tsc --watch"
-    },
-    "dependencies": {
-      "@modelcontextprotocol/sdk": "0.6.0",
-      "arangojs": "^9.1.0"
-    },
-    "devDependencies": {
-      "shx": "^0.3.4",
-      "typescript": "^5.6.2"
-    }
+  "name": "arango-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for interacting with Arango databases. For more information about the Model Context Protocol, visit https://modelcontextprotocol.io",
+  "license": "MIT",
+  "author": "Lucas DE ANGELIS <deangelis.lucas@outlook.com>",
+  "bugs": "https://github.com/lucas-deangelis/arango-mcp-server/issues",
+  "type": "module",
+  "bin": {
+    "mcp-server-postgres": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "0.6.0",
+    "arangojs": "^9.1.0"
+  },
+  "devDependencies": {
+    "shx": "^0.3.4",
+    "typescript": "^5.6.2"
   }
+}
