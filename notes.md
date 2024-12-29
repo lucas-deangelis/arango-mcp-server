@@ -70,3 +70,47 @@ I had a few issues.
 First the initialization script for arangodb wasn't working properly.
 Then I passed `arango:8529` instead of `localhost:8529` to the inspector.
 Also nodemon was on `src/index.ts` which made it not work, now it works!
+
+We are thus finished with the resource rabbit hole!
+I think at least.
+According to the spec I'm pretty confident with `resources/templates/list`, less so with the rest.
+`resources/read` can only do one thing for now, read a document according to the template.
+I will study for a while how resources are implemented in the modelcontextprotocol servers (https://github.com/modelcontextprotocol/servers)
+
+For the filesystem MCP server (https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem), it says there is one resource, `file://system`, but I can't find it in the code.
+Reading a file is a tool.
+This begs the question: is reading a document a tool, a resource, both?
+Tools can have an `inputSchema` it seems, that seem to be a JSONSchema.
+
+Now for postgresql https://github.com/modelcontextprotocol/servers/tree/main/src/postgres
+Reesources here are table schemas.
+I could expose the arangodb schemas too.
+There is only one tool, a read only query.
+This is what I used as inspiration, as in a way you don't need the resource if you can get the documents through queries.
+Oh, I just realized: resources offer tracking/subscriptions, something that a tool allowing you to read stuff can't offer.
+So if I can add a way to be subscribed to changes on any resources that would justify using resources in a way.
+
+Finally SQLite https://github.com/modelcontextprotocol/servers/tree/main/src/sqlite
+Very interesting resource here, `memo://insights`, "A continuously updated business insights memo that aggregates discovered insights during analysis"
+In the tools list, there is `append_insight` that allows you to add an insight and triggers an update of the `memo://insights` resource.
+This feels like the most advanced resource I've seen for now.
+It's like it's something more abstract.
+Rather than just "data that already exists", it's "data that is constantly evolving and can be changed by the model using the tools itself"
+There is also a prompt called `mcp-demo`, an "Interactive prompt that guides users through database operations".
+We'll take a deeper look just after going through the tools.
+As for the tools, we have `read_query` and `write_query`.
+This would be possible to emulate with arangodb.
+There is also `create_table`.
+No `drop_table` though, not sure if it's intentional or not, and if so why.
+We just saw the query tools.
+Now for the schema tools.
+`list_tables` does what it says on the tin.
+`describe-table` uses the schema.
+I could make a tool `list_collections`.
+For `describe-table` it'll be more like `get_collection_schema_if_it_exists`.
+I'll note that this seems to be for just one database.
+For database servers I feel like you can either do "one server per database" or "one server per database server".
+Finally there's an analysis tool, `append_insight`.
+As discussed earlier it adds a new business insight to the `memo://insights` resource.
+After reading the code, the memos are simply a python list of the insights discovered while exploring the data
+This MCP server is a super interesting example because while the others are plumbing to expose data to models, this one feels more like a business analyst assistant x sqlite if that makes sense.

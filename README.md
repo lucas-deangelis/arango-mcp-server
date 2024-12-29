@@ -44,15 +44,22 @@ Go to http://localhost:5173/ to see the inspector.
 ## Todo
 
 - [x] Dev environment
+- [x] `resources/read` with a template to read any document by database name, collection, id.
+- [ ] Properly study the spec to see if the current implementation of resources actually make sense (I don't think it does)
+  - [x] The resource templates make sense
 - [ ] Change all the "arango" to "arangodb" (repo name included...)
-- [ ] `resources/read` with a template to read any document by database name, collection, id.
 - [ ] client pool (one client by database)
+  - [ ] Or maybe not? Since other servers seem to be one by database and not one by database server
+- [ ] Add back the arangodb password
+- [ ] Like on the SQLite MCP client
+  - [ ] `write_query` tool separated from `read_query`
+  - [ ] `list_collections` (see `list_tables`)
 - [ ] Proper README
+  - [ ] Tools/resource/etc following the format of the official anthropic stuff
 - [ ] Figure out notifications
 - [ ] Health checks
 - [ ] Add username and passwords as parameters of the command
 - [ ] More tools?
 - [ ] Access all the databases running on an arangodb instance
 - [ ] Release on npm somehow so it can be used with `npx`
-- [ ] Properly study the spec to see if the current implementation of resources actually make sense (I don't think it does)
 - [ ] `resources/subscribe` and `notifications/resources/list_changed` and `resources/unsubscribe`
