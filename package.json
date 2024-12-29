@@ -13,15 +13,22 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc && shx chmod +x dist/*.js",
-    "prepare": "npm run build",
-    "watch": "tsc --watch"
+    "generate-data": "node dev/generate-ecommerce-data.cjs && node dev/generate-library-data.cjs",
+    "docker:build": "docker build -t arangodb-for-arango-mcp-server dev",
+    "docker:run": "docker run -p 8529:8529 -d --name arangodb-for-arango-mcp-server-dev arangodb-for-arango-mcp-server",
+    "docker:stop": "docker stop arangodb-for-arango-mcp-server-dev",
+    "docker:remove": "docker rm arangodb-for-arango-mcp-server-dev",
+    "dev:setup": "npm run generate-data && npm run docker:build && npm run docker:run",
+    "dev:teardown": "npm run docker:stop && npm run docker:remove",
+    "dev": "nodemon",
+    "build": "tsc && shx chmod +x dist/*.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "0.6.0",
     "arangojs": "^9.1.0"
   },
   "devDependencies": {
+    "nodemon": "^3.1.9",
     "shx": "^0.3.4",
     "typescript": "^5.6.2"
   }

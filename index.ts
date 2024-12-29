@@ -5,6 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
@@ -131,6 +132,13 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
   console.error("collections: " + allCollections);
   console.error("collections:" + JSON.stringify(allCollections));
 
+  const anyDocument = {
+    uriTemplate: "arangodb://{database}/{collection}/{documentID}",
+    name: "ArangoDB document",
+    mimeType: "application/json",
+    description: "A document in an ArangoDB collection",
+  }
+
   return {
     resources: allCollections.map((collection) => ({
       uri: new URL(`${resourceBaseUrl}/_api/document/${collection.name}`),
@@ -138,6 +146,21 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
       name: `"${collection.name}" http endpoint`,
     })),
   };
+});
+
+server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+  const toto = "";
+
+  return {
+    resourceTemplates: [
+      {
+        uriTemplate: "arangodb://{database}/{collection}/{documentID}",
+        name: "ArangoDB document",
+        mimeType: "application/json",
+        description: "A document in an ArangoDB collection",
+      }
+    ]
+  }
 });
 
 // server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
