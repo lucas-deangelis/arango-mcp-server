@@ -49,7 +49,9 @@ function debug(data: string) {
 
 const args = process.argv.slice(2);
 if (args.length < 2) {
-  console.error("Please provide a database URL and a database name as a command-line argument");
+  console.error(
+    "Please provide a database URL and a database name as a command-line argument"
+  );
   process.exit(1);
 }
 
@@ -132,13 +134,6 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
   console.error("collections: " + allCollections);
   console.error("collections:" + JSON.stringify(allCollections));
 
-  const anyDocument = {
-    uriTemplate: "arangodb://{database}/{collection}/{documentID}",
-    name: "ArangoDB document",
-    mimeType: "application/json",
-    description: "A document in an ArangoDB collection",
-  }
-
   return {
     resources: allCollections.map((collection) => ({
       uri: new URL(`${resourceBaseUrl}/_api/document/${collection.name}`),
@@ -149,17 +144,108 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
 });
 
 server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
-  const toto = "";
-
   return {
     resourceTemplates: [
       {
-        uriTemplate: "arangodb://{database}/{collection}/{documentID}",
+        uriTemplate: "arangodb:///{database}/{collection}/{documentID}",
         name: "ArangoDB document",
         mimeType: "application/json",
         description: "A document in an ArangoDB collection",
-      }
-    ]
+      },
+    ],
+  };
+});
+
+interface ArangoDBURI {
+  databaseName: string;
+  collectionName: string;
+  documentId: string;
+}
+
+class InvalidArangoDBURIError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidArangoDBURIError";
+  }
+}
+
+/**
+ * Parses and validates an ArangoDB URI string of the format:
+ * arangodb:///databaseName/collectionName/documentID
+ *
+ * @param uri The ArangoDB URI string to parse
+ * @returns An object containing the parsed components
+ * @throws InvalidArangoDBURIError if the URI format is invalid
+ */
+export function parseArangoDBURI(uri: string): ArangoDBURI {
+  // Check if the string starts with the correct prefix
+  if (!uri.startsWith("arangodb:///")) {
+    throw new InvalidArangoDBURIError('URI must start with "arangodb:///"');
+  }
+
+  // Remove the prefix and split the remaining path
+  const path = uri.slice("arangodb:///".length);
+  const components = path.split("/");
+
+  // Validate we have exactly 3 components
+  if (components.length !== 3) {
+    throw new InvalidArangoDBURIError(
+      "URI must have exactly three components: databaseName/collectionName/documentId"
+    );
+  }
+
+  // Validate each component is non-empty
+  const [databaseName, collectionName, documentId] = components;
+
+  if (!databaseName) {
+    throw new InvalidArangoDBURIError("Database name cannot be empty");
+  }
+
+  if (!collectionName) {
+    throw new InvalidArangoDBURIError("Collection name cannot be empty");
+  }
+
+  if (!documentId) {
+    throw new InvalidArangoDBURIError("Document ID cannot be empty");
+  }
+
+  // Optional: Add additional validation for component formats if needed
+  // For example, checking for valid characters, length limits, etc.
+
+  return {
+    databaseName,
+    collectionName,
+    documentId,
+  };
+}
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  const uri = request.params.uri;
+  const arangodbURI = parseArangoDBURI(uri);
+
+  const db = new Database({
+    url: databaseUrl,
+    databaseName: arangodbURI.databaseName,
+    // auth: { username: "root", password: "root" },
+  });
+
+  try {
+    const document = await db
+      .collection(arangodbURI.collectionName)
+      .document(arangodbURI.documentId);
+
+    return {
+      contents: [
+        {
+          uri,
+          mimeType: "application/json",
+          text: JSON.stringify(document),
+        },
+      ],
+    };
+  } catch (error) {
+    console.error("error: " + error);
+    throw error;
   }
 });
 
@@ -220,11 +306,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     const tx = await db.beginTransaction({
       read: allCollections.map((collection) => collection.name),
-    })
+    });
 
     const cursor = await tx.step(() => db.query(aql));
 
-    const result = await cursor.all()
+    const result = await cursor.all();
 
     return {
       content: [{ type: "text", text: JSON.stringify(result, null, 2) }],

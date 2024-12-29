@@ -64,3 +64,9 @@ I can work with that, provided I gave a usable template.
 Let's implement `resources/read`!
 
 First I need `resources/templates/list`: https://spec.modelcontextprotocol.io/specification/server/resources/#resource-templates
+This is implemented and works.
+I've also implemented `resources/read`.
+I had a few issues.
+First the initialization script for arangodb wasn't working properly.
+Then I passed `arango:8529` instead of `localhost:8529` to the inspector.
+Also nodemon was on `src/index.ts` which made it not work, now it works!
