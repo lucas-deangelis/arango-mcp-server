@@ -1,5 +1,5 @@
 {
-  "exec": "tsc && npx @modelcontextprotocol/inspector node dist/index.js http://arango:8529 account",
   "watch": ["index.ts"],
+  "exec": "tsc && npx @modelcontextprotocol/inspector node dist/index.js http://localhost:8529 account",
   "ext": "ts"
 }
