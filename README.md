@@ -14,8 +14,13 @@ To be filled.
 
 #### Query Tools
 
-- `query`
+- `readQuery`
   - Execute read-only query on the database
+  - Input:
+    - `query` (string): The read-only AQL query to execute
+  - Returns: Query results as array of objects
+- `readWriteQuery`
+  - Execute query on the database
   - Input:
     - `query` (string): The AQL query to execute
   - Returns: Query results as array of objects
@@ -62,7 +67,7 @@ Go to http://localhost:5173/ to see the inspector.
 
 - [x] Dev environment
 - [x] `resources/read` with a template to read any document by database name, collection, id.
-- [ ] properly document tools in the readme
+- [] properly document tools in the readme
 - [ ] read/write query
 - [ ] fix the todo
 - [ ] Properly study the spec to see if the current implementation of resources actually make sense (I don't think it does)

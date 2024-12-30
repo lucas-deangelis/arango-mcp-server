@@ -120,5 +120,7 @@ Good to know: it's normal to return quoted json in the `text` field of a `resour
 Okay, now I'm going to implement the multi-database approach.
 The idea is to go from handling a single database to a whole database server.
 I'd like to add a resource that returns the list of databases, that would be a good start.
-But thinkin about this more I'm not sure exactly how to make the resource, so for now I'll start with a tool that returns all the databases, and maybe info about them.
+But thinking about this more I'm not sure exactly how to make the resource, so for now I'll start with a tool that returns all the databases, and maybe info about them.
 
+Multi database with connection pool is done.
+Tool that returns all the databases is done.
