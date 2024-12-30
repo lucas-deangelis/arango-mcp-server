@@ -11,6 +11,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { Database, aql } from "arangojs";
 import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
 const server = new Server(
   {
@@ -73,9 +74,14 @@ const resourceBaseUrl = new URL(databaseUrl);
 
 const db = new Database({
   url: databaseUrl,
-  databaseName: databaseName,
-  auth: { username: "root", password: "root" },
-});
+  // auth: { username: "root", password: "root" },
+})
+
+// const db = new Database({
+//   url: databaseUrl,
+//   databaseName: databaseName,
+//   auth: { username: "root", password: "root" },
+// });
 
 const SCHEMA_PATH = "schema";
 
@@ -281,24 +287,35 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 //   }
 // });
 
+const querySchema = z.object({
+  aql: z.string(),
+});
+const listDatabasesSchema = z.object({});
+
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
         name: "query",
         description: "Run a read-only AQL query",
-        inputSchema: {
-          type: "object",
-          properties: {
-            aql: { type: "string" },
-          },
-        },
+        inputSchema: zodToJsonSchema(querySchema),
       },
+      {
+        name: "listDatabases",
+        description: "List all the databases",
+        inputSchema: zodToJsonSchema(listDatabasesSchema),
+      }
     ],
   };
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.sendLoggingMessage({
+    level: "debug",
+    data: `CallToolRequest with name ${request.params.name}`,
+  })
+
+  try {
   if (request.params.name === "query") {
     const aql = request.params.arguments?.aql as string;
 
@@ -316,6 +333,31 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       isError: false,
     };
+  } else if (request.params.name === "listDatabases") {
+    server.sendLoggingMessage({
+      level: "debug",
+      data: `listDatabases`,
+    })
+
+    const allDatabases = await db.databases();
+
+    return {
+      content: [{ type: "text", text: JSON.stringify(allDatabases.map(database => {
+        return {
+          name: database.name,
+        }
+      }), null, 2) }],
+      isError: false,
+    };
+  }
+  } catch (error) {
+    server.sendLoggingMessage({
+      level: "error",
+      data: `Error: ${error}`,
+    })
+
+    console.error("error inside the CallToolRequestSchema: " + error);
+    throw error;
   }
 
   throw new Error("Unknown tool");

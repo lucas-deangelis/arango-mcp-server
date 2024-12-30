@@ -114,3 +114,11 @@ Finally there's an analysis tool, `append_insight`.
 As discussed earlier it adds a new business insight to the `memo://insights` resource.
 After reading the code, the memos are simply a python list of the insights discovered while exploring the data
 This MCP server is a super interesting example because while the others are plumbing to expose data to models, this one feels more like a business analyst assistant x sqlite if that makes sense.
+
+Good to know: it's normal to return quoted json in the `text` field of a `resources/read` response, it's in an example in the spec (well actually it's escaped rust but you get the idea).
+
+Okay, now I'm going to implement the multi-database approach.
+The idea is to go from handling a single database to a whole database server.
+I'd like to add a resource that returns the list of databases, that would be a good start.
+But thinkin about this more I'm not sure exactly how to make the resource, so for now I'll start with a tool that returns all the databases, and maybe info about them.
+
