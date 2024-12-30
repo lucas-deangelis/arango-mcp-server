@@ -288,20 +288,43 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 // });
 
 const querySchema = z.object({
+  databaseName: z.string(),
   aql: z.string(),
 });
 const listDatabasesSchema = z.object({});
+
+enum ToolName {
+  QUERY = "query",
+  LIST_DATABASES = "listDatabases",
+}
+
+const databaseConnections = new Map<string, Database>();
+
+function getOrCreateDatabaseConnection(databaseName: string): Database {
+  if (databaseConnections.has(databaseName)) {
+    return databaseConnections.get(databaseName)!;
+  }
+  
+  const dbConnector = new Database({
+    url: databaseUrl,
+    databaseName: databaseName,
+    auth: { username: "root", password: "root" },
+  });
+  
+  databaseConnections.set(databaseName, dbConnector);
+  return dbConnector;
+}
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
-        name: "query",
+        name: ToolName.QUERY,
         description: "Run a read-only AQL query",
         inputSchema: zodToJsonSchema(querySchema),
       },
       {
-        name: "listDatabases",
+        name: ToolName.LIST_DATABASES,
         description: "List all the databases",
         inputSchema: zodToJsonSchema(listDatabasesSchema),
       }
@@ -316,16 +339,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   })
 
   try {
-  if (request.params.name === "query") {
+  if (request.params.name === ToolName.QUERY) {
+    const dbConnector = getOrCreateDatabaseConnection(request.params.arguments?.databaseName as string);
+
     const aql = request.params.arguments?.aql as string;
 
-    const allCollections = await getCollections(db);
+    const allCollections = await getCollections(dbConnector);
 
-    const tx = await db.beginTransaction({
+    const tx = await dbConnector.beginTransaction({
       read: allCollections.map((collection) => collection.name),
     });
 
-    const cursor = await tx.step(() => db.query(aql));
+    const cursor = await tx.step(() => dbConnector.query(aql));
 
     const result = await cursor.all();
 
@@ -333,7 +358,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       isError: false,
     };
-  } else if (request.params.name === "listDatabases") {
+  } else if (request.params.name === ToolName.LIST_DATABASES) {
     server.sendLoggingMessage({
       level: "debug",
       data: `listDatabases`,

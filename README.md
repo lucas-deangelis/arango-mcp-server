@@ -2,6 +2,27 @@
 
 This is an implementation of the Model Context Protocol for ArangoDB.
 
+## Overview
+
+To be filled.
+
+## Components
+
+### Resources
+
+### Tools
+
+#### Query Tools
+
+- `query`
+  - Execute read-only query on the database
+  - Input:
+    - `query` (string): The AQL query to execute
+  - Returns: Query results as array of objects
+- `listDatabases`
+  - List all the databases on the ArangoDB server
+  - Returns: Array of the databases names
+
 ## Usage
 
 To connect to an arangodb instance running on localhost:2434, to the database "account", add the following to your `claude_desktop_config.json`, assuming the path to this project is `/home/yourcoolname/arango-mcp-server`:
@@ -20,10 +41,6 @@ To connect to an arangodb instance running on localhost:2434, to the database "a
 	}
 }
 ```
-
-## Tools
-
-- query: Run a read-only AQL query.
 
 ## Development
 
@@ -45,6 +62,9 @@ Go to http://localhost:5173/ to see the inspector.
 
 - [x] Dev environment
 - [x] `resources/read` with a template to read any document by database name, collection, id.
+- [ ] properly document tools in the readme
+- [ ] read/write query
+- [ ] fix the todo
 - [ ] Properly study the spec to see if the current implementation of resources actually make sense (I don't think it does)
   - [x] The resource templates make sense
 - [ ] Change all the "arango" to "arangodb" (repo name included...)
