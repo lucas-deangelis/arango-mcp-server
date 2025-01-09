@@ -34,8 +34,8 @@ function debug(data) {
 //   })
 // }
 const args = process.argv.slice(2);
-if (args.length < 2) {
-    console.error("Please provide a database URL and a database name as a command-line argument");
+if (args.length < 1) {
+    console.error("Please provide a database URL");
     process.exit(1);
 }
 // Database URL should be in the format:
@@ -219,14 +219,19 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 //     client.release();
 //   }
 // });
-const querySchema = z.object({
+const readQuerySchema = z.object({
+    databaseName: z.string(),
+    aql: z.string(),
+});
+const readWriteQuerySchema = z.object({
     databaseName: z.string(),
     aql: z.string(),
 });
 const listDatabasesSchema = z.object({});
 var ToolName;
 (function (ToolName) {
-    ToolName["QUERY"] = "query";
+    ToolName["READ_QUERY"] = "readQuery";
+    ToolName["READ_WRITE_QUERY"] = "readWriteQuery";
     ToolName["LIST_DATABASES"] = "listDatabases";
 })(ToolName || (ToolName = {}));
 const databaseConnections = new Map();
@@ -246,9 +251,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [
             {
-                name: ToolName.QUERY,
+                name: ToolName.READ_QUERY,
                 description: "Run a read-only AQL query",
-                inputSchema: zodToJsonSchema(querySchema),
+                inputSchema: zodToJsonSchema(readQuerySchema),
+            },
+            {
+                name: ToolName.READ_WRITE_QUERY,
+                description: "Run an AQL query",
+                inputSchema: zodToJsonSchema(readQuerySchema),
             },
             {
                 name: ToolName.LIST_DATABASES,
@@ -264,12 +274,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         data: `CallToolRequest with name ${request.params.name}`,
     });
     try {
-        if (request.params.name === ToolName.QUERY) {
+        if (request.params.name === ToolName.READ_QUERY) {
             const dbConnector = getOrCreateDatabaseConnection(request.params.arguments?.databaseName);
             const aql = request.params.arguments?.aql;
             const allCollections = await getCollections(dbConnector);
             const tx = await dbConnector.beginTransaction({
                 read: allCollections.map((collection) => collection.name),
+            });
+            const cursor = await tx.step(() => dbConnector.query(aql));
+            const result = await cursor.all();
+            return {
+                content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+                isError: false,
+            };
+        }
+        else if (request.params.name === ToolName.READ_WRITE_QUERY) {
+            const dbConnector = getOrCreateDatabaseConnection(request.params.arguments?.databaseName);
+            const aql = request.params.arguments?.aql;
+            const allCollections = await getCollections(dbConnector);
+            const tx = await dbConnector.beginTransaction({
+                read: allCollections.map((collection) => collection.name),
+                write: allCollections.map((collection) => collection.name),
             });
             const cursor = await tx.step(() => dbConnector.query(aql));
             const result = await cursor.all();

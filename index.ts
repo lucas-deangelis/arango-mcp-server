@@ -49,9 +49,9 @@ function debug(data: string) {
 // }
 
 const args = process.argv.slice(2);
-if (args.length < 2) {
+if (args.length < 1) {
   console.error(
-    "Please provide a database URL and a database name as a command-line argument"
+    "Please provide a database URL"
   );
   process.exit(1);
 }
