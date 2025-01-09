@@ -34,16 +34,15 @@ To connect to an arangodb instance running on localhost:2434, to the database "a
 
 ```json
 {
-	"mcpServers": {
-		"arangodb-account" : {
-			"command": "node",
-			"args": [
-				"/home/yourcoolname/arango-mcp-server/dist/index.js",
-				"https://localhost:2434",
-				"account"
-			]
-		}
-	}
+    "mcpServers": {
+        "arangodb-account" : {
+            "command": "node",
+            "args": [
+                "/home/yourcoolname/arango-mcp-server/dist/index.js",
+                "https://localhost:2434"
+            ]
+        }
+    }
 }
 ```
 
