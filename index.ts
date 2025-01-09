@@ -41,13 +41,6 @@ function debug(data: string) {
   });
 }
 
-// const error = (data: string) => {
-//   server.sendLoggingMessage({
-//     level: "error",
-//     data: data,
-//   })
-// }
-
 const args = process.argv.slice(2);
 if (args.length < 1) {
   console.error(
@@ -60,49 +53,20 @@ if (args.length < 1) {
 // "http://localhost:8529"
 const databaseUrl = args[0];
 
-// Database name should be the name of the database to connect to, eg "account".
-const databaseName = args[1];
+const username = args.length > 1 ? args[1] : undefined;
+const password = args.length > 2 ? args[2] : undefined;
+
+const auth = username && password ? { username, password } : undefined;
+
+console.error("databaseUrl: " + databaseUrl);
+console.error("auth: " + JSON.stringify(auth));
 
 const resourceBaseUrl = new URL(databaseUrl);
 
-// info(`Starting ArangoDB MCP server with URL ${databaseUrl}`);
-
-// server.sendLoggingMessage({
-//   level: "info",
-//   data: `Starting ArangoDB MCP server with URL ${databaseUrl}`,
-// })
-
 const db = new Database({
   url: databaseUrl,
-  // auth: { username: "root", password: "root" },
+  auth: auth,
 })
-
-// const db = new Database({
-//   url: databaseUrl,
-//   databaseName: databaseName,
-//   auth: { username: "root", password: "root" },
-// });
-
-const SCHEMA_PATH = "schema";
-
-// async function getCollections(db: Database): Promise<string[]> {
-//   const cursor = await db.query(aql`
-//     RETURN COLLECTIONS()
-//   `);
-
-//   const collectionSchema = z.object({
-//     _id: z.string(),
-//     name: z.string(),
-//   });
-
-//   type CollectionType = z.infer<typeof collectionSchema>;
-
-//   const result = await cursor.all();
-
-//   return cursor.all().then((result) => {
-//     return result.flat().map((collection) => collectionSchema.parse(collection).name);
-//   });
-// }
 
 async function getCollections(db: Database): Promise<CollectionType[]> {
   const cursor = await db.query(aql`
@@ -232,7 +196,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   const db = new Database({
     url: databaseUrl,
     databaseName: arangodbURI.databaseName,
-    // auth: { username: "root", password: "root" },
+    auth: auth,
   });
 
   try {
@@ -255,52 +219,27 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   }
 });
 
-// server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-//   const resourceUrl = new URL(request.params.uri);
-
-//   const pathComponents = resourceUrl.pathname.split("/");
-//   const schema = pathComponents.pop();
-//   const tableName = pathComponents.pop();
-
-//   if (schema !== SCHEMA_PATH) {
-//     throw new Error("Invalid resource URI");
-//   }
-
-//   const client = await pool.connect();
-//   try {
-//     const result = await client.query(
-//       "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = $1",
-//       [tableName],
-//     );
-
-//     return {
-//       contents: [
-//         {
-//           uri: request.params.uri,
-//           mimeType: "application/json",
-//           text: JSON.stringify(result.rows, null, 2),
-//         },
-//       ],
-//     };
-//   } finally {
-//     client.release();
-//   }
-// });
-
 const readQuerySchema = z.object({
   databaseName: z.string(),
   aql: z.string(),
 });
+
 const readWriteQuerySchema = z.object({
   databaseName: z.string(),
   aql: z.string(),
 });
+
 const listDatabasesSchema = z.object({});
+
+const listCollectionsSchema = z.object({
+  databaseName: z.string(),
+})
 
 enum ToolName {
   READ_QUERY = "readQuery",
   READ_WRITE_QUERY = "readWriteQuery",
   LIST_DATABASES = "listDatabases",
+  LIST_COLLECTIONS = "listCollections",
 }
 
 const databaseConnections = new Map<string, Database>();
@@ -309,13 +248,13 @@ function getOrCreateDatabaseConnection(databaseName: string): Database {
   if (databaseConnections.has(databaseName)) {
     return databaseConnections.get(databaseName)!;
   }
-  
+
   const dbConnector = new Database({
     url: databaseUrl,
     databaseName: databaseName,
-    auth: { username: "root", password: "root" },
+    auth: auth,
   });
-  
+
   databaseConnections.set(databaseName, dbConnector);
   return dbConnector;
 }
@@ -331,12 +270,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: ToolName.READ_WRITE_QUERY,
         description: "Run an AQL query",
-        inputSchema: zodToJsonSchema(readQuerySchema),
+        inputSchema: zodToJsonSchema(readWriteQuerySchema),
       },
       {
         name: ToolName.LIST_DATABASES,
         description: "List all the databases",
         inputSchema: zodToJsonSchema(listDatabasesSchema),
+      },
+      {
+        name: ToolName.LIST_COLLECTIONS,
+        description: "List all the collections in a database",
+        inputSchema: zodToJsonSchema(listCollectionsSchema),
       }
     ],
   };
@@ -349,62 +293,77 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   })
 
   try {
-  if (request.params.name === ToolName.READ_QUERY) {
-    const dbConnector = getOrCreateDatabaseConnection(request.params.arguments?.databaseName as string);
+    if (request.params.name === ToolName.READ_QUERY) {
+      const dbConnector = getOrCreateDatabaseConnection(request.params.arguments?.databaseName as string);
 
-    const aql = request.params.arguments?.aql as string;
+      const aql = request.params.arguments?.aql as string;
 
-    const allCollections = await getCollections(dbConnector);
+      const allCollections = await getCollections(dbConnector);
 
-    const tx = await dbConnector.beginTransaction({
-      read: allCollections.map((collection) => collection.name),
-    });
+      const tx = await dbConnector.beginTransaction({
+        read: allCollections.map((collection) => collection.name),
+      });
 
-    const cursor = await tx.step(() => dbConnector.query(aql));
+      const cursor = await tx.step(() => dbConnector.query(aql));
 
-    const result = await cursor.all();
+      const result = await cursor.all();
 
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      isError: false,
-    };
-  } else if (request.params.name === ToolName.READ_WRITE_QUERY) {
-    const dbConnector = getOrCreateDatabaseConnection(request.params.arguments?.databaseName as string);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        isError: false,
+      };
+    } else if (request.params.name === ToolName.READ_WRITE_QUERY) {
+      const dbConnector = getOrCreateDatabaseConnection(request.params.arguments?.databaseName as string);
 
-    const aql = request.params.arguments?.aql as string;
+      const aql = request.params.arguments?.aql as string;
 
-    const allCollections = await getCollections(dbConnector);
+      const allCollections = await getCollections(dbConnector);
 
-    const tx = await dbConnector.beginTransaction({
-      read: allCollections.map((collection) => collection.name),
-      write: allCollections.map((collection) => collection.name),
-    });
+      const tx = await dbConnector.beginTransaction({
+        read: allCollections.map((collection) => collection.name),
+        write: allCollections.map((collection) => collection.name),
+      });
 
-    const cursor = await tx.step(() => dbConnector.query(aql));
+      const cursor = await tx.step(() => dbConnector.query(aql));
 
-    const result = await cursor.all();
+      const result = await cursor.all();
 
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      isError: false,
-    };
-  } else if (request.params.name === ToolName.LIST_DATABASES) {
-    server.sendLoggingMessage({
-      level: "debug",
-      data: `listDatabases`,
-    })
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        isError: false,
+      };
+    } else if (request.params.name === ToolName.LIST_DATABASES) {
+      server.sendLoggingMessage({
+        level: "debug",
+        data: `listDatabases`,
+      })
 
-    const allDatabases = await db.databases();
+      const allDatabases = await db.databases();
 
-    return {
-      content: [{ type: "text", text: JSON.stringify(allDatabases.map(database => {
-        return {
-          name: database.name,
-        }
-      }), null, 2) }],
-      isError: false,
-    };
-  }
+      return {
+        content: [{
+          type: "text", text: JSON.stringify(allDatabases.map(database => {
+            return {
+              name: database.name,
+            }
+          }), null, 2)
+        }],
+        isError: false,
+      };
+    } else if (request.params.name === ToolName.LIST_COLLECTIONS) {
+      const dbConnector = getOrCreateDatabaseConnection(request.params.arguments?.databaseName as string);
+      const allCollections = await getCollections(dbConnector);
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify(allCollections.map(collection => ({
+            name: collection.name
+          })), null, 2)
+        }],
+        isError: false,
+      };
+    }
   } catch (error) {
     server.sendLoggingMessage({
       level: "error",

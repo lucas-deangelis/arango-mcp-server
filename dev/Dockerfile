@@ -11,7 +11,7 @@ COPY ./data /docker-entrypoint-initdb.d/data/
 COPY ./init.js /docker-entrypoint-initdb.d/
 
 # ENV ARANGO_ROOT_PASSWORD=root
-ENV ARANGO_NO_AUTH=1
+ENV ARANGO_ROOT_PASSWORD=root
 
 # Default arangodb port
 EXPOSE 8529

@@ -1,5 +1,5 @@
 {
   "watch": ["index.ts"],
-  "exec": "tsc && npx @modelcontextprotocol/inspector node dist/index.js http://localhost:8529 ecommerce_db",
+  "exec": "tsc && npx @modelcontextprotocol/inspector node dist/index.js http://localhost:8529 root root",
   "ext": "ts"
 }

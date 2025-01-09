@@ -27,12 +27,6 @@ function debug(data) {
         data: data,
     });
 }
-// const error = (data: string) => {
-//   server.sendLoggingMessage({
-//     level: "error",
-//     data: data,
-//   })
-// }
 const args = process.argv.slice(2);
 if (args.length < 1) {
     console.error("Please provide a database URL");
@@ -41,38 +35,16 @@ if (args.length < 1) {
 // Database URL should be in the format:
 // "http://localhost:8529"
 const databaseUrl = args[0];
-// Database name should be the name of the database to connect to, eg "account".
-const databaseName = args[1];
+const username = args.length > 1 ? args[1] : undefined;
+const password = args.length > 2 ? args[2] : undefined;
+const auth = username && password ? { username, password } : undefined;
+console.error("databaseUrl: " + databaseUrl);
+console.error("auth: " + JSON.stringify(auth));
 const resourceBaseUrl = new URL(databaseUrl);
-// info(`Starting ArangoDB MCP server with URL ${databaseUrl}`);
-// server.sendLoggingMessage({
-//   level: "info",
-//   data: `Starting ArangoDB MCP server with URL ${databaseUrl}`,
-// })
 const db = new Database({
     url: databaseUrl,
-    // auth: { username: "root", password: "root" },
+    auth: auth,
 });
-// const db = new Database({
-//   url: databaseUrl,
-//   databaseName: databaseName,
-//   auth: { username: "root", password: "root" },
-// });
-const SCHEMA_PATH = "schema";
-// async function getCollections(db: Database): Promise<string[]> {
-//   const cursor = await db.query(aql`
-//     RETURN COLLECTIONS()
-//   `);
-//   const collectionSchema = z.object({
-//     _id: z.string(),
-//     name: z.string(),
-//   });
-//   type CollectionType = z.infer<typeof collectionSchema>;
-//   const result = await cursor.all();
-//   return cursor.all().then((result) => {
-//     return result.flat().map((collection) => collectionSchema.parse(collection).name);
-//   });
-// }
 async function getCollections(db) {
     const cursor = await db.query(aql `
     RETURN COLLECTIONS()
@@ -171,7 +143,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const db = new Database({
         url: databaseUrl,
         databaseName: arangodbURI.databaseName,
-        // auth: { username: "root", password: "root" },
+        auth: auth,
     });
     try {
         const document = await db
@@ -192,33 +164,6 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
         throw error;
     }
 });
-// server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-//   const resourceUrl = new URL(request.params.uri);
-//   const pathComponents = resourceUrl.pathname.split("/");
-//   const schema = pathComponents.pop();
-//   const tableName = pathComponents.pop();
-//   if (schema !== SCHEMA_PATH) {
-//     throw new Error("Invalid resource URI");
-//   }
-//   const client = await pool.connect();
-//   try {
-//     const result = await client.query(
-//       "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = $1",
-//       [tableName],
-//     );
-//     return {
-//       contents: [
-//         {
-//           uri: request.params.uri,
-//           mimeType: "application/json",
-//           text: JSON.stringify(result.rows, null, 2),
-//         },
-//       ],
-//     };
-//   } finally {
-//     client.release();
-//   }
-// });
 const readQuerySchema = z.object({
     databaseName: z.string(),
     aql: z.string(),
@@ -228,11 +173,15 @@ const readWriteQuerySchema = z.object({
     aql: z.string(),
 });
 const listDatabasesSchema = z.object({});
+const listCollectionsSchema = z.object({
+    databaseName: z.string(),
+});
 var ToolName;
 (function (ToolName) {
     ToolName["READ_QUERY"] = "readQuery";
     ToolName["READ_WRITE_QUERY"] = "readWriteQuery";
     ToolName["LIST_DATABASES"] = "listDatabases";
+    ToolName["LIST_COLLECTIONS"] = "listCollections";
 })(ToolName || (ToolName = {}));
 const databaseConnections = new Map();
 function getOrCreateDatabaseConnection(databaseName) {
@@ -242,7 +191,7 @@ function getOrCreateDatabaseConnection(databaseName) {
     const dbConnector = new Database({
         url: databaseUrl,
         databaseName: databaseName,
-        auth: { username: "root", password: "root" },
+        auth: auth,
     });
     databaseConnections.set(databaseName, dbConnector);
     return dbConnector;
@@ -258,12 +207,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             {
                 name: ToolName.READ_WRITE_QUERY,
                 description: "Run an AQL query",
-                inputSchema: zodToJsonSchema(readQuerySchema),
+                inputSchema: zodToJsonSchema(readWriteQuerySchema),
             },
             {
                 name: ToolName.LIST_DATABASES,
                 description: "List all the databases",
                 inputSchema: zodToJsonSchema(listDatabasesSchema),
+            },
+            {
+                name: ToolName.LIST_COLLECTIONS,
+                description: "List all the collections in a database",
+                inputSchema: zodToJsonSchema(listCollectionsSchema),
             }
         ],
     };
@@ -310,11 +264,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             });
             const allDatabases = await db.databases();
             return {
-                content: [{ type: "text", text: JSON.stringify(allDatabases.map(database => {
+                content: [{
+                        type: "text", text: JSON.stringify(allDatabases.map(database => {
                             return {
                                 name: database.name,
                             };
-                        }), null, 2) }],
+                        }), null, 2)
+                    }],
+                isError: false,
+            };
+        }
+        else if (request.params.name === ToolName.LIST_COLLECTIONS) {
+            const dbConnector = getOrCreateDatabaseConnection(request.params.arguments?.databaseName);
+            const allCollections = await getCollections(dbConnector);
+            return {
+                content: [{
+                        type: "text",
+                        text: JSON.stringify(allCollections.map(collection => ({
+                            name: collection.name
+                        })), null, 2)
+                    }],
                 isError: false,
             };
         }

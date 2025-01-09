@@ -17,16 +17,23 @@ To be filled.
 - `readQuery`
   - Execute read-only query on the database
   - Input:
-    - `query` (string): The read-only AQL query to execute
+    - `databaseName` (string): The database to query
+    - `aql` (string): The read-only AQL query to execute
   - Returns: Query results as array of objects
 - `readWriteQuery`
   - Execute query on the database
   - Input:
-    - `query` (string): The AQL query to execute
+    - `databaseName` (string): The database to query
+    - `aql` (string): The AQL query to execute
   - Returns: Query results as array of objects
 - `listDatabases`
   - List all the databases on the ArangoDB server
   - Returns: Array of the databases names
+- `listCollections`
+  - List all the collections in an ArangoDB database
+  - Input:
+    - `databaseName` (string): The name of the database
+  - Returns: Array of objects `{ "name": "<collectionName>" }`
 
 ## Usage
 
@@ -34,15 +41,17 @@ To connect to an arangodb instance running on localhost:2434, to the database "a
 
 ```json
 {
-    "mcpServers": {
-        "arangodb-account" : {
-            "command": "node",
-            "args": [
-                "/home/yourcoolname/arango-mcp-server/dist/index.js",
-                "https://localhost:2434"
-            ]
-        }
+  "mcpServers": {
+    "arangodb-account" : {
+      "command": "node",
+      "args": [
+        "/home/yourcoolname/arango-mcp-server/dist/index.js",
+        "https://localhost:2434",
+        "username",
+        "password"
+      ]
     }
+  }
 }
 ```
 
@@ -64,26 +73,23 @@ Go to http://localhost:5173/ to see the inspector.
 
 ## Todo
 
-- [x] Dev environment
-- [x] `resources/read` with a template to read any document by database name, collection, id.
-- [] properly document tools in the readme
-- [ ] read/write query
-- [ ] fix the todo
 - [ ] Properly study the spec to see if the current implementation of resources actually make sense (I don't think it does)
   - [x] The resource templates make sense
 - [ ] Change all the "arango" to "arangodb" (repo name included...)
-- [ ] client pool (one client by database)
-  - [ ] Or maybe not? Since other servers seem to be one by database and not one by database server
 - [ ] Add back the arangodb password
-- [ ] Like on the SQLite MCP client
-  - [ ] `write_query` tool separated from `read_query`
-  - [ ] `list_collections` (see `list_tables`)
 - [ ] Proper README
   - [ ] Tools/resource/etc following the format of the official anthropic stuff
 - [ ] Figure out notifications
 - [ ] Health checks
-- [ ] Add username and passwords as parameters of the command
 - [ ] More tools?
 - [ ] Access all the databases running on an arangodb instance
 - [ ] Release on npm somehow so it can be used with `npx`
 - [ ] `resources/subscribe` and `notifications/resources/list_changed` and `resources/unsubscribe`
+- [x] Properly document tools in the readme
+- [x] Like on the SQLite MCP client
+  - [x] `write_query` tool separated from `read_query` -> actually is `readWriteQuery`
+  - [x] `list_collections` (see `list_tables`)
+- [x] Client pool ie one client per database
+- [x] Dev environment
+- [x] `resources/read` with a template to read any document by database name, collection, id.
+- [x] Add username and passwords as parameters of the command
