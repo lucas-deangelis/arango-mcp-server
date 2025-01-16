@@ -1,6 +1,6 @@
 {
   "name": "arango-mcp-server",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "MCP server for interacting with Arango databases. For more information about the Model Context Protocol, visit https://modelcontextprotocol.io",
   "license": "MIT",
   "author": "Lucas DE ANGELIS <deangelis.lucas@outlook.com>",
@@ -9,8 +9,10 @@
   "bin": {
     "mcp-server-postgres": "dist/index.js"
   },
+  "main": "dist/index.js",
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "generate-data": "node dev/generate-ecommerce-data.cjs && node dev/generate-library-data.cjs",
