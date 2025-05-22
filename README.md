@@ -1,5 +1,7 @@
 # ArangoDB MCP Server
 
+[![smithery badge](https://smithery.ai/badge/@lucas-deangelis/arango-mcp-server)](https://smithery.ai/server/@lucas-deangelis/arango-mcp-server)
+
 This is an implementation of the Model Context Protocol for ArangoDB.
 
 ## Overview
@@ -94,3 +96,11 @@ Go to http://localhost:5173/ to see the inspector.
 - [x] Dev environment
 - [x] `resources/read` with a template to read any document by database name, collection, id.
 - [x] Add username and passwords as parameters of the command
+
+### Installing via Smithery
+
+To install ArangoDB MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@lucas-deangelis/arango-mcp-server):
+
+```bash
+npx -y @smithery/cli install @lucas-deangelis/arango-mcp-server --client claude
+```
